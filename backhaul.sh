@@ -108,7 +108,7 @@ config_dir="/root/backhaul-core"
 # Function to download and extract Backhaul Core
 download_and_extract_backhaul() {
     if [[ "$1" == "menu" ]]; then
-        rm -rf "${config_dir}/  " >/dev/null 2>&1
+        rm -rf "${config_dir}/backhaul_premium" >/dev/null 2>&1
         echo
         colorize cyan "Restart all services after updating to new core" bold
         sleep 2
