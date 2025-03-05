@@ -108,7 +108,7 @@ config_dir="/root/backhaul-core"
 # Function to download and extract Backhaul Core
 download_and_extract_backhaul() {
     if [[ "$1" == "menu" ]]; then
-        rm -rf "${config_dir}/backhaul_premium" >/dev/null 2>&1
+        rm -rf "${config_dir}/  " >/dev/null 2>&1
         echo
         colorize cyan "Restart all services after updating to new core" bold
         sleep 2
@@ -1808,7 +1808,7 @@ update_script(){
 # Define the destination path
 DEST_DIR="/usr/bin/"
 BACKHAUL_SCRIPT="backhaul"
-SCRIPT_URL="http://backhaul.rocektserver.com/backhaul.sh"
+SCRIPT_URL="https://raw.githubusercontent.com/wafflenoodle/zenith-stash/refs/heads/main/backhaul.sh"
 
 echo
 # Check if backhaul.sh exists in /bin/bash
@@ -1852,22 +1852,12 @@ CYAN='\e[36m'
 MAGENTA="\e[95m"
 NC='\033[0m' # No Color
 
-core_update_msg=$(check_core_version "http://backhaul.rocektserver.com/version")
-script_update_msg=$(check_script_version "http://backhaul.rocektserver.com/script_version")
-
 # Function to display menu
 display_menu() {
     clear
     display_logo
     display_server_info
     display_backhaul_core_status
-    
-    if [[ -n "$core_update_msg" ]]; then
-        echo $core_update_msg
-    fi
-    if [[ -n "$script_update_msg" ]]; then
-        echo $script_update_msg
-    fi
     
     echo
     colorize green " 1. Configure a new tunnel [IPv4/IPv6]" bold
