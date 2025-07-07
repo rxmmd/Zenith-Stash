@@ -1354,6 +1354,7 @@ view_service_status (){
     press_key
 }
 
+
 # _________________________ HAWSHEMI SCRIPT OPT FOR UBUNTU _________________________
 # Declare Paths & Settings.
 SYS_PATH="/etc/sysctl.conf"
@@ -1718,7 +1719,189 @@ limits_optimizations() {
 
 # _________________________ END OF HAWSHEMI SCRIPT OPT FOR UBUNTU _________________________
 
+# Function to set up cron job for tunnel restart
 
+setup_cron_job() {
+    echo
+    colorize cyan "Setting up cron job for tunnel restart" bold
+    echo
+
+    # Display menu options
+    echo -e "${GREEN}1) Install cron${NC}"
+    echo -e "${GREEN}2) Create cron for tunnel${NC}"
+    echo -e "${GREEN}3) Check created cron file${NC}"
+    echo -e "${GREEN}4) Remove a cron job${NC}"
+    echo
+    echo -ne "Enter your choice (0 to return): "
+    read choice
+    if [ "$choice" -eq 0 ]; then
+        return
+    fi
+    while ! [[ "$choice" =~ ^[0-9]+$ ]] || [ "$choice" -lt 1 ] || [ "$choice" -gt 4 ]; do
+        colorize red "Invalid choice. Please enter a number between 1 and 4."
+        echo
+        echo -ne "Enter your choice (0 to return): "
+        read choice
+        if [ "$choice" -eq 0 ]; then
+            return
+        fi
+    done
+
+    case $choice in
+        1)
+            # Install cron
+            if ! command -v crontab &> /dev/null; then
+                echo
+                colorize cyan "Installing cron..." bold
+                if command -v apt-get &> /dev/null; then
+                    apt-get update
+                    apt-get install -y cron
+                elif command -v yum &> /dev/null; then
+                    yum install -y cronie
+                else
+                    colorize red "Unsupported package manager. Please install cron manually (e.g., 'sudo apt-get install cron')."
+                    echo
+                    press_key
+                    return 1
+                fi
+                if command -v crontab &> /dev/null; then
+                    colorize green "Cron installed successfully."
+                else
+                    colorize red "Failed to install cron. Please check your system."
+                    echo
+                    press_key
+                    return 1
+                fi
+            else
+                colorize green "Cron is already installed."
+            fi
+            echo
+            press_key
+            ;;
+        2)
+            # Create cron for tunnel
+            if ! ls /root/backhaul-core/*.toml 1> /dev/null 2>&1; then
+                colorize red "No config files found in the Backhaul directory."
+                echo
+                press_key
+                return 1
+            fi
+
+            # List available tunnels
+            local index=1
+            declare -a configs
+            for config_path in /root/backhaul-core/iran*.toml /root/backhaul-core/kharej*.toml; do
+                if [ -f "$config_path" ]; then
+                    config_name=$(basename "$config_path")
+                    config_port="${config_name#*-}"
+                    config_port="${config_port%.toml}"
+                    configs+=("$config_path")
+                    echo -e "${MAGENTA}${index}${NC}) ${GREEN}$(echo $config_name | cut -d'-' -f2)${NC} service, Tunnel port: ${YELLOW}$config_port${NC}"
+                    ((index++))
+                fi
+            done
+
+            echo
+            echo -ne "Enter your choice (0 to return): "
+            read choice
+            if [ "$choice" -eq 0 ]; then
+                return
+            fi
+            while ! [[ "$choice" =~ ^[0-9]+$ ]] || [ "$choice" -lt 1 ] || [ "$choice" -gt "${#configs[@]}" ]; do
+                colorize red "Invalid choice. Please enter a number between 1 and ${#configs[@]}."
+                echo
+                echo -ne "Enter your choice (0 to return): "
+                read choice
+                if [ "$choice" -eq 0 ]; then
+                    return
+                fi
+            done
+
+            selected_config="${configs[$((choice - 1))]}"
+            config_name=$(basename "${selected_config%.toml}")
+            service_name="backhaul-${config_name}.service"
+
+            echo
+            while true; do
+                echo -ne "Enter restart interval in minutes (e.g., 30): "
+                read -r interval
+                if [[ "$interval" =~ ^[0-9]+$ ]] && [ "$interval" -ge 5 ]; then
+                    break
+                else
+                    colorize red "Please enter a valid interval (minimum 5 minutes)."
+                    echo
+                fi
+            done
+
+            # Create cron job file
+            cron_file="/root/cronjob"
+            echo "*/$interval * * * * systemctl restart $service_name" > "$cron_file"
+            crontab "$cron_file"
+            rm -f "$cron_file"
+
+            colorize green "Cron job set to restart $config_name every $interval minutes."
+            echo
+            press_key
+            ;;
+        3)
+            # Check created cron file
+            if crontab -l > /dev/null 2>&1; then
+                echo
+                colorize cyan "Current cron jobs:" bold
+                crontab -l
+            else
+                colorize red "No cron jobs found or cron is not configured."
+            fi
+            echo
+            press_key
+            ;;
+        4)
+            # Remove a cron job
+            if ! crontab -l > /dev/null 2>&1; then
+                colorize red "No cron jobs found or cron is not configured."
+                echo
+                press_key
+                return 1
+            fi
+
+            echo
+            colorize cyan "Current cron jobs:" bold
+            mapfile -t cron_jobs < <(crontab -l)
+            for ((i=0; i<${#cron_jobs[@]}; i++)); do
+                echo -e "${MAGENTA}$((i+1))${NC}) ${cron_jobs[$i]}"
+            done
+            echo
+            echo -e "${YELLOW}Enter the number of the cron job to remove (0 to return):${NC}"
+            read -r job_number
+            if [ "$job_number" -eq 0 ]; then
+                return
+            fi
+
+            total_jobs=${#cron_jobs[@]}
+            if [ "$job_number" -lt 1 ] || [ "$job_number" -gt "$total_jobs" ]; then
+                colorize red "Invalid job number. Please enter a number between 1 and $total_jobs."
+                echo
+                press_key
+                return 1
+            fi
+
+            # Remove the selected job
+            unset "cron_jobs[$((job_number - 1))]"
+            printf "%s\n" "${cron_jobs[@]}" > /root/cronjob
+            crontab /root/cronjob
+            rm -f /root/cronjob
+
+            colorize green "Cron job number $job_number removed successfully."
+            echo
+            press_key
+            ;;
+        *)
+            colorize red "Invalid option!"
+            echo
+            press_key
+            ;;
+    esac
+}
 
 hawshemi_script(){
 clear
@@ -1867,6 +2050,7 @@ display_menu() {
  	echo -e " 5. Update & Install Backhaul Core"
  	echo -e " 6. Update & install script"
  	echo -e " 7. Remove Backhaul Core"
+    echo -e " 8. Set up cron job for automatic restart"
     echo -e " 0. Exit"
     echo
     echo "-------------------------------"
@@ -1883,6 +2067,7 @@ read_option() {
         5) download_and_extract_backhaul "menu";;
         6) update_script ;;
         7) remove_core ;;
+        8) setup_cron_job ;;
         0) exit 0 ;;
         *) echo -e "${RED} Invalid option!${NC}" && sleep 1 ;;
     esac
