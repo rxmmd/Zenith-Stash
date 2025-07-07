@@ -1793,10 +1793,8 @@ setup_cron_job() {
             for config_path in /root/backhaul-core/iran*.toml /root/backhaul-core/kharej*.toml; do
                 if [ -f "$config_path" ]; then
                     config_name=$(basename "$config_path")
-                    config_port="${config_name#*-}"
-                    config_port="${config_port%.toml}"
                     configs+=("$config_path")
-                    echo -e "${MAGENTA}${index}${NC}) ${GREEN}$(echo $config_name | cut -d'-' -f2)${NC} service, Tunnel port: ${YELLOW}$config_port${NC}"
+                    echo -e "${MAGENTA}${index}${NC}) ${GREEN}$(echo $config_name | cut -d'-' -f2)${NC} service"
                     ((index++))
                 fi
             done
