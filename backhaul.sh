@@ -2069,7 +2069,7 @@ display_menu() {
 
 # Function to read user input
 read_option() {
-    read -p "Enter your choice [0-7]: " choice
+    read -p "Enter your choice [0-8]: " choice
     case $choice in
         1) configure_tunnel ;;
         2) tunnel_management ;;
