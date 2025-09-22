@@ -5,8 +5,6 @@ bash <(curl -Ls --ipv4 https://raw.githubusercontent.com/mmdv2/zenith-stash/refs
 
 <p align="center">✨ نگاهی به پنل مدیریت  ✨</p>
 <div align="center">
-
-<br/
 <br/>
 
 </div>
